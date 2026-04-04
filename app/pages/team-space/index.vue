@@ -13,8 +13,7 @@
     </div>
 
     <!-- Activity Sidebar -->
-    <team-space-activity-sidebar :activities="activities" :is-open="isSidebarOpen"
-      @close="isSidebarOpen = false" />
+    <team-space-activity-sidebar :activities="activities" :is-open="isSidebarOpen" @close="isSidebarOpen = false" />
   </div>
 </template>
 
@@ -56,6 +55,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { label: 'Monolith', to: '/dashboard' },
   { label: 'Team Space' }
 ]
+
+useHead({
+  titleTemplate: () => 'Team Space',
+});
 
 definePageMeta({
   layout: 'dashboard',

@@ -21,6 +21,10 @@ const breadcrumbItems = [
   { label: 'Starred Files' }
 ]
 
+useHead({
+  titleTemplate: () => 'Starred Files',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

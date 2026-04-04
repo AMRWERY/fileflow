@@ -16,7 +16,8 @@
       <Transition name="fade" mode="out-in">
         <div v-if="emailSent" class="text-center py-4">
           <div class="flex items-center justify-center mb-5">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <div
+              class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <Icon name="ph:envelope-simple-open-bold" class="text-emerald-400 text-2xl" />
             </div>
           </div>
@@ -27,14 +28,12 @@
           </p>
           <p class="text-xs text-gray-600 mb-8">
             Didn't receive it? Check your spam folder or
-            <button
-              class="text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
+            <button class="text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
               @click="handleResend">
               resend
             </button>
           </p>
-          <nuxt-link
-            to="/auth/login"
+          <nuxt-link to="/auth/login"
             class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group">
             <Icon name="ph:arrow-left-bold" class="text-xs transition-transform group-hover:-translate-x-1" />
             <span>Back to sign in</span>
@@ -52,8 +51,7 @@
 
           <!-- Error Banner -->
           <Transition name="fade">
-            <div
-              v-if="auth.error"
+            <div v-if="auth.error"
               class="flex items-start gap-3 mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               <Icon name="ph:warning-circle-bold" class="mt-0.5 shrink-0 text-base" />
               <span>{{ auth.error }}</span>
@@ -62,12 +60,7 @@
 
           <!-- Form -->
           <VForm :schema="forgotSchema" @submit="handleResetRequest">
-            <VInput
-              name="email"
-              rules="required|email"
-              label="Email"
-              type="email"
-              placeholder="name@company.com"
+            <VInput name="email" rules="required|email" label="Email" type="email" placeholder="name@company.com"
               autocomplete="email" />
 
             <VButton type="submit" variant="primary" :full-width="true" :loading="auth.isLoading">
@@ -77,8 +70,7 @@
 
           <!-- Back to Sign In -->
           <div class="mt-8 text-center">
-            <nuxt-link
-              to="/auth/login"
+            <nuxt-link to="/auth/login"
               class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group">
               <Icon name="ph:arrow-left-bold" class="text-xs transition-transform group-hover:-translate-x-1" />
               <span>Back to sign in</span>
@@ -119,6 +111,10 @@ const handleResend = async () => {
   auth.clearError()
   await auth.resetPassword(sentToEmail.value)
 }
+
+useHead({
+  titleTemplate: () => 'Forget Password',
+});
 </script>
 
 <style scoped>

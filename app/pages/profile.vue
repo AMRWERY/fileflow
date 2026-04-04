@@ -223,6 +223,10 @@ const sessions = [
   { device: 'iPhone 15 Pro - App', location: 'Abu Dhabi, UAE', status: '2 hours ago', current: false, icon: 'ph:device-mobile-bold' },
 ];
 
+useHead({
+  titleTemplate: () => 'Profile',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

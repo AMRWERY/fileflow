@@ -35,6 +35,10 @@ const breadcrumbItems = [
   { label: 'Personal Space' }
 ]
 
+useHead({
+  titleTemplate: () => 'Personal Space',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

@@ -92,4 +92,8 @@ const handleGoogle = async () => {
   await auth.loginWithGoogle()
   oauthLoading.value = null
 }
+
+useHead({
+  titleTemplate: () => 'Login',
+});
 </script>

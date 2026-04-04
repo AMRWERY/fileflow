@@ -57,11 +57,13 @@
       <PersonalSpaceFileCard v-for="file in files" :key="file.id" :file="file" :variant="viewMode" />
     </div>
 
-    <!-- Empty State (Optional) -->
-    <div v-if="!files.length" class="flex flex-col items-center justify-center py-20 grayscale opacity-20">
-      <icon name="ph:folder-open-duotone" size="64" />
-      <p class="text-sm font-bold tracking-widest mt-4">Empty Space</p>
-    </div>
+    <!-- Empty State -->
+    <VEmptyState
+      v-if="!files.length"
+      title="No files in this space"
+      description="Encryption is active. Uploaded files will be stored in your private vault."
+      icon="ph:lock-key-duotone"
+    />
   </section>
 </template>
 

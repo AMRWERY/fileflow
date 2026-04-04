@@ -1,5 +1,12 @@
+export interface FolderPreviewFile {
+  id: string
+  name: string
+  type: string
+  mime_type: string
+}
+
 export interface FileItem {
-  id: number;
+  id: string | number;
   name: string;
   type:
     | "folder"
@@ -10,7 +17,8 @@ export interface FileItem {
     | "sheet"
     | "svg"
     | "png"
-    | "docx";
+    | "docx"
+    | "document";
   size: string;
   date?: string;
   icon?: string;
@@ -20,5 +28,7 @@ export interface FileItem {
   selected?: boolean;
   previewUrl?: string;
   previewColor?: string;
+  /** First 3 files inside this folder (only populated for type==='folder') */
+  previewFiles?: FolderPreviewFile[]
 }
 

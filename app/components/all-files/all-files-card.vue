@@ -8,6 +8,7 @@
       ? 'border-indigo-500/50 ring-1 ring-indigo-500/20'
       : 'border-white/5 hover:border-white/10 hover:bg-[#161619]',
   ]">
+    <!-- Checkbox for files -->
     <div v-if="file.type !== 'folder'" @click.stop="emit('toggle', file.id)" :class="[
       'absolute z-10 p-1 -m-1 cursor-pointer transition-all duration-200',
       variant === 'list' ? 'top-3 end-3' : 'top-4 end-4',
@@ -19,13 +20,34 @@
         class="w-5 h-5 rounded-full border-2 border-white/20 bg-[#1c1c1f]/50 backdrop-blur-sm hover:border-indigo-400/50" />
     </div>
 
+    <!-- Delete button for folders -->
+    <div v-if="file.type === 'folder'" @click.stop="emit('delete-folder', file.id)" :class="[
+      'absolute z-10 p-1.5 cursor-pointer transition-all duration-200 rounded-lg hover:bg-red-500/10',
+      variant === 'list' ? 'top-3 end-3' : 'top-3 end-3',
+      'opacity-0 group-hover:opacity-100',
+    ]">
+      <Icon name="ph:trash-duotone" size="16" class="text-red-400/70 hover:text-red-400" />
+    </div>
+
     <div :class="[
       'rounded-xl bg-[#0a0a0c] flex items-center justify-center relative overflow-hidden shrink-0',
       variant === 'list'
         ? 'w-28 sm:w-32 h-20 sm:h-24'
         : 'h-56 w-full mb-4',
     ]">
-      <template v-if="file.type === 'image' && file.previewUrl">
+      <!-- Folder thumbnail -->
+      <template v-if="file.type === 'folder'">
+        <div class="w-full h-full flex flex-col items-center justify-center gap-2">
+          <div class="rounded-2xl bg-amber-500/10 p-4">
+            <Icon name="ph:folder-duotone" size="36" class="text-amber-400" />
+          </div>
+          <span class="text-[10px] font-bold text-gray-500 px-2 truncate max-w-full">
+            {{ file.previewFiles?.length ? `${file.previewFiles.length} file${file.previewFiles.length > 1 ? 's' : ''}` : 'Empty' }}
+          </span>
+        </div>
+      </template>
+
+      <template v-else-if="file.type === 'image' && file.previewUrl">
         <img :src="file.previewUrl"
           class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" alt="" />
         <div
@@ -75,15 +97,15 @@ const props = withDefaults(
   { variant: 'grid' }
 )
 
-const emit = defineEmits<{ toggle: [id: number] }>()
+const emit = defineEmits<{
+  toggle: [id: string | number]
+  'delete-folder': [id: string | number]
+}>()
 
 const handleClick = () => {
-  if (props.file.type === 'folder') {
-    const slug = props.file.name.toLowerCase().replace(/\s+/g, '-')
-    return navigateTo(`/all-files/folders/${slug}`)
-  }
-  // For files, navigate to preview page
-  return navigateTo(`/all-files/${props.file.id}`)
+  const id = props.file.id
+  const sk = props.file.type === 'folder' ? 'folder' : 'file'
+  return navigateTo({ path: `/all-files/${id}`, query: { sk } })
 }
 </script>
 

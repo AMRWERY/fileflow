@@ -12,12 +12,20 @@
       </div>
     </div>
 
-    <div :class="[
+    <div v-if="files.length > 0" :class="[
       'grid gap-8',
       viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'
     ]">
       <shared-files-card v-for="file in files" :key="file.id" :file="file" />
     </div>
+
+    <!-- Empty State -->
+    <VEmptyState
+      v-else
+      title="No shared files"
+      description="Files and folders others have shared with you will appear here."
+      icon="ph:users-three-duotone"
+    />
   </div>
 </template>
 

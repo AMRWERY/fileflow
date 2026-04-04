@@ -48,6 +48,10 @@ const activeComponent = computed(() => {
   return componentsMap[activeTab.value as TabType];
 });
 
+useHead({
+  titleTemplate: () => 'Settings',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

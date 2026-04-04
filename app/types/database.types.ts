@@ -1,5 +1,4 @@
 // ─── Profiles ───────────────────────────────────────────────────────────────
-
 export interface Profile {
   id: string
   email: string
@@ -14,7 +13,6 @@ export interface Profile {
 }
 
 // ─── Folders ────────────────────────────────────────────────────────────────
-
 export interface Folder {
   id: string
   user_id: string
@@ -39,7 +37,6 @@ export interface FolderTree {
 }
 
 // ─── Files ──────────────────────────────────────────────────────────────────
-
 export type ScanStatus = 'pending' | 'clean' | 'infected' | 'skipped'
 
 export interface FileMetadata {
@@ -82,7 +79,6 @@ export interface FileRecord {
 }
 
 // ─── File Versions ───────────────────────────────────────────────────────────
-
 export interface FileVersion {
   id: string
   file_id: string
@@ -96,7 +92,6 @@ export interface FileVersion {
 }
 
 // ─── File Tags ───────────────────────────────────────────────────────────────
-
 export interface FileTag {
   id: string
   file_id: string
@@ -106,7 +101,6 @@ export interface FileTag {
 }
 
 // ─── Share Links ─────────────────────────────────────────────────────────────
-
 export type SharePermission = 'view' | 'download'
 
 export interface ShareLink {
@@ -126,7 +120,6 @@ export interface ShareLink {
 }
 
 // ─── File Requests ───────────────────────────────────────────────────────────
-
 export interface FileRequest {
   id: string
   token: string
@@ -143,7 +136,6 @@ export interface FileRequest {
 }
 
 // ─── Upload Sessions ─────────────────────────────────────────────────────────
-
 export type UploadSessionStatus = 'in_progress' | 'assembling' | 'complete' | 'failed'
 
 export interface UploadSession {
@@ -163,7 +155,6 @@ export interface UploadSession {
 }
 
 // ─── Team Spaces ─────────────────────────────────────────────────────────────
-
 export interface TeamSpace {
   id: string
   name: string
@@ -177,7 +168,6 @@ export interface TeamSpace {
 }
 
 // ─── Team Members ────────────────────────────────────────────────────────────
-
 export type TeamMemberRole = 'admin' | 'editor' | 'viewer'
 
 export interface TeamMember {
@@ -191,7 +181,6 @@ export interface TeamMember {
 }
 
 // ─── Activity Logs ───────────────────────────────────────────────────────────
-
 export type ActivityAction =
   | 'upload'
   | 'file_delete'
@@ -228,7 +217,6 @@ export interface ActivityLog {
 }
 
 // ─── File Comments ───────────────────────────────────────────────────────────
-
 export interface FileComment {
   id: string
   file_id: string
@@ -240,7 +228,6 @@ export interface FileComment {
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────
-
 export type NotificationType =
   | 'upload_complete'
   | 'share_activity'
@@ -263,8 +250,88 @@ export interface Notification {
   created_at: string
 }
 
-// ─── API Keys ────────────────────────────────────────────────────────────────
+// ─── Database (Supabase generic shape) ───────────────────────────────────────
+export type Database = {
+  public: {
+    Tables: {
+      profiles: {
+        Row: Profile
+        Insert: Omit<Profile, 'created_at' | 'updated_at'>
+        Update: Partial<Profile>
+      }
+      folders: {
+        Row: Folder
+        Insert: Omit<Folder, 'created_at' | 'updated_at'>
+        Update: Partial<Folder>
+      }
+      files: {
+        Row: FileRecord
+        Insert: Omit<FileRecord, 'created_at' | 'updated_at'>
+        Update: Partial<FileRecord>
+      }
+      file_versions: {
+        Row: FileVersion
+        Insert: Omit<FileVersion, 'created_at'>
+        Update: Partial<FileVersion>
+      }
+      file_tags: {
+        Row: FileTag
+        Insert: Omit<FileTag, 'created_at'>
+        Update: Partial<FileTag>
+      }
+      share_links: {
+        Row: ShareLink
+        Insert: Omit<ShareLink, 'created_at'>
+        Update: Partial<ShareLink>
+      }
+      file_requests: {
+        Row: FileRequest
+        Insert: Omit<FileRequest, 'created_at'>
+        Update: Partial<FileRequest>
+      }
+      upload_sessions: {
+        Row: UploadSession
+        Insert: Omit<UploadSession, 'created_at' | 'updated_at'>
+        Update: Partial<UploadSession>
+      }
+      team_spaces: {
+        Row: TeamSpace
+        Insert: Omit<TeamSpace, 'created_at' | 'updated_at'>
+        Update: Partial<TeamSpace>
+      }
+      team_members: {
+        Row: TeamMember
+        Insert: Omit<TeamMember, 'invited_at'>
+        Update: Partial<TeamMember>
+      }
+      activity_logs: {
+        Row: ActivityLog
+        Insert: Omit<ActivityLog, 'created_at'>
+        Update: Partial<ActivityLog>
+      }
+      file_comments: {
+        Row: FileComment
+        Insert: Omit<FileComment, 'created_at' | 'updated_at'>
+        Update: Partial<FileComment>
+      }
+      notifications: {
+        Row: Notification
+        Insert: Omit<Notification, 'created_at'>
+        Update: Partial<Notification>
+      }
+      api_keys: {
+        Row: ApiKey
+        Insert: Omit<ApiKey, 'created_at'>
+        Update: Partial<ApiKey>
+      }
+    }
+    Views: {}
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+  }
+}
 
+// ─── API Keys ────────────────────────────────────────────────────────────────
 export type ApiKeyScope = 'read' | 'write' | 'delete' | 'share' | 'admin'
 
 export interface ApiKey {

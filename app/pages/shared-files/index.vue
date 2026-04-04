@@ -93,6 +93,10 @@ const sharedFiles = ref<SharedFile[]>([
   }
 ])
 
+useHead({
+  titleTemplate: () => 'Shared Files',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

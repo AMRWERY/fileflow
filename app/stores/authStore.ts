@@ -41,11 +41,17 @@ export const useAuthStore = defineStore('auth', () => {
   // ─── Profile ──────────────────────────────────────────────────────────────
 
   const fetchProfile = async (): Promise<Profile | null> => {
-    if (!supabaseUser.value) return null
+    const uid = supabaseUser.value?.id
+    if (!uid) return null
+    try {
+      await $fetch('/api/auth/ensure-profile', { method: 'POST', credentials: 'include' })
+    } catch {
+      /* row may already exist; continue to select */
+    }
     const { data, error: err } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', supabaseUser.value.id)
+      .eq('id', uid)
       .single()
     if (err) {
       // console.error('[auth] fetchProfile error:', err.message)
@@ -170,7 +176,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await supabase.auth.signOut()
       profile.value = null
-      toast.success('Signed out', 'You have been signed out successfully.')
       await navigateTo('/auth/login')
     } finally {
       isLoading.value = false

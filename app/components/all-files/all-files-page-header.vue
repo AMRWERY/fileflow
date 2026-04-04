@@ -6,23 +6,23 @@
       <h1 class="text-3xl font-bold text-white">{{ currentTitle }}</h1>
 
       <div class="flex flex-wrap items-center gap-3">
-        <VSearchInput
-          v-model="filterQuery"
-          wrapper-class="w-full sm:w-64"
-          placeholder="Filter current view…"
+        <VSearchInput v-model="filterQuery" wrapper-class="w-full sm:w-64" placeholder="Filter current view…"
           input-class="!bg-[#121214] !border-white/5 focus:!ring-1 focus:!ring-indigo-500/30"
-          aria-label="Filter current view"
-        />
+          aria-label="Filter current view" />
 
         <VButton variant="ghost" size="sm" class="!bg-[#121214] !border-white/5 !px-4 !py-2 hover:!bg-white/5">
           Name
           <icon name="ph:arrow-up-bold" size="14" />
         </VButton>
 
-        <VButton type="button" variant="ghost" size="sm" class="!p-2 !bg-[#121214] !border-white/5 hover:!bg-white/5"
-          :title="viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'" @click="toggleViewMode">
-          <icon :name="viewMode === 'grid' ? 'ph:list-dashes' : 'ph:grid-four-fill'" size="20"
-            class="text-indigo-400" />
+        <VButton variant="secondary" size="sm" class="!px-4 !py-2" @click="emit('new-folder')">
+          <icon name="ph:folder-plus-bold" size="14" class="me-1" />
+          Folder
+        </VButton>
+
+        <VButton size="sm" class="!px-4 !py-2" @click="emit('upload')">
+          <icon name="ph:upload-simple-bold" size="14" class="me-1" />
+          Upload
         </VButton>
       </div>
     </div>
@@ -32,6 +32,8 @@
 <script lang="ts" setup>
 import type { BreadcrumbItem } from '~/types/shared-components/breadcrumb'
 
+const emit = defineEmits(['upload', 'new-folder'])
+
 const props = defineProps<{
   title?: string
   /** Override default Home → title trail */
@@ -40,13 +42,7 @@ const props = defineProps<{
 
 const filterQuery = defineModel<string>('filterQuery', { default: '' })
 
-const viewMode = defineModel<'grid' | 'list'>('viewMode', { default: 'grid' })
-
 const currentTitle = computed(() => props.title ?? 'My Files')
-
-function toggleViewMode() {
-  viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid'
-}
 
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   if (props.breadcrumbs?.length) return props.breadcrumbs

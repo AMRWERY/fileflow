@@ -28,4 +28,8 @@ if (code) {
 } else {
   await navigateTo('/auth/login')
 }
+
+useHead({
+  titleTemplate: () => 'Confirm Email',
+});
 </script>

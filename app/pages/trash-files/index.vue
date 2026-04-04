@@ -55,6 +55,10 @@ const breadcrumbItems = [
   { label: 'Trash' }
 ]
 
+useHead({
+  titleTemplate: () => 'Trash',
+});
+
 definePageMeta({
   layout: 'dashboard',
 })

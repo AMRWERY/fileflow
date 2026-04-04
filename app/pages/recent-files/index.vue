@@ -7,6 +7,14 @@
     <!-- Grouped Content -->
     <recent-group v-for="group in groups" :key="group.label" :view-mode="viewMode" :label="group.label"
       :files="group.files" />
+
+    <!-- Empty State -->
+    <VEmptyState
+      v-if="!groups.length"
+      title="No recent activity"
+      description="Files you've recently accessed, uploaded, or modified will appear here."
+      icon="ph:clock-duotone"
+    />
   </div>
 </template>
 
@@ -38,6 +46,10 @@ const breadcrumbItems = [
   { label: 'Monolith', to: '/dashboard' },
   { label: 'Recent Files' }
 ]
+
+useHead({
+  titleTemplate: () => 'Recent Files',
+});
 
 definePageMeta({
   layout: 'dashboard',
