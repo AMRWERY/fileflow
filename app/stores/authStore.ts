@@ -20,7 +20,11 @@ const AUTH_ERROR_MAP: Record<string, string> = {
 }
 
 function formatAuthError(message: string): string {
-  return AUTH_ERROR_MAP[message] ?? message
+  // Try exact match first, then case-insensitive fallback
+  if (AUTH_ERROR_MAP[message]) return AUTH_ERROR_MAP[message]
+  const lower = message.toLowerCase()
+  const key = Object.keys(AUTH_ERROR_MAP).find((k) => k.toLowerCase() === lower)
+  return key ? AUTH_ERROR_MAP[key] : message
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -150,7 +154,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ─── Password Reset ───────────────────────────────────────────────────────
 
-  const resetPassword = async (email: string): Promise<boolean> => {
+  const resetPassword = async (email: string): Promise<'ok' | 'rate_limited' | 'error'> => {
     isLoading.value = true
     error.value = null
     try {
@@ -158,12 +162,17 @@ export const useAuthStore = defineStore('auth', () => {
       const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
       if (err) throw err
       toast.success('Reset link sent', 'Check your inbox for the password reset link.')
-      return true
+      return 'ok'
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.'
-      error.value = formatAuthError(msg)
-      toast.error('Request failed', error.value ?? msg)
-      return false
+      const raw = err instanceof Error ? err.message : 'Something went wrong.'
+      // Supabase may also expose a `code` field on the error object
+      const code = (err as { code?: string })?.code ?? ''
+      const isRateLimit =
+        code === 'over_email_send_rate_limit' ||
+        raw.toLowerCase().includes('rate limit')
+      error.value = formatAuthError(isRateLimit ? 'over_email_send_rate_limit' : raw)
+      toast.error('Request failed', error.value ?? raw)
+      return isRateLimit ? 'rate_limited' : 'error'
     } finally {
       isLoading.value = false
     }
