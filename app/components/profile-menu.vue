@@ -1,12 +1,13 @@
 <template>
   <div>
     <div class="relative ps-4 border-s border-white/5" ref="profileRef">
-      <button @click="profileOpen = !profileOpen"
-        class="flex items-center gap-3 rounded-xl hover:bg-white/[0.03] p-1.5 transition-colors">
+      <button type="button" :disabled="isTrial" @click="!isTrial && (profileOpen = !profileOpen)"
+        :class="isTrial ? 'cursor-default' : 'hover:bg-white/[0.03]'"
+        class="flex items-center gap-3 rounded-xl p-1.5 transition-colors">
         <div class="text-end">
           <p class="text-sm font-bold text-white leading-none mb-1">{{ displayName }}</p>
           <p class="text-[10px] text-indigo-400 font-bold tracking-tighter">
-            Pro Plan
+            {{ isTrial ? 'Free Trial' : 'Pro Plan' }}
           </p>
         </div>
         <img v-if="avatarUrl" :src="avatarUrl" alt="Avatar"
@@ -18,7 +19,7 @@
       </button>
 
       <!-- Profile Dropdown -->
-      <Transition enter-active-class="transition duration-150 ease-out"
+      <Transition v-if="!isTrial" enter-active-class="transition duration-150 ease-out"
         enter-from-class="opacity-0 scale-95 translate-y-1" enter-to-class="opacity-100 scale-100 translate-y-0"
         leave-active-class="transition duration-100 ease-in" leave-from-class="opacity-100 scale-100 translate-y-0"
         leave-to-class="opacity-0 scale-95 translate-y-1">
@@ -62,7 +63,7 @@
 <script lang="ts" setup>
 const authSession = useAuthSessionStore()
 const authProfile = useAuthProfileStore()
-const supabaseUser = useSupabaseUser()
+const sessionUser = computed(() => authSession.user)
 
 const profileOpen = ref(false)
 const profileRef = ref<HTMLElement | null>(null)
@@ -102,26 +103,29 @@ const handleOutsideClick = (e: MouseEvent) => {
 
 // Fetch profile on mount in case of page refresh
 onMounted(async () => {
-  if (!authProfile.profile && supabaseUser.value) {
+  if (!authProfile.profile && sessionUser.value) {
     await authProfile.fetchProfile()
   }
   document.addEventListener('click', handleOutsideClick)
 })
 
 // profile.full_name → user_metadata.full_name (OAuth) → email prefix → 'User'
+const isTrial = computed(() => authSession.isTrial)
+
 const displayName = computed(() => {
+  if (isTrial.value) return 'User'
   if (authProfile.profile?.full_name) return authProfile.profile.full_name
-  const meta = supabaseUser.value?.user_metadata
+  const meta = sessionUser.value?.user_metadata
   if (meta?.full_name) return meta.full_name
   if (meta?.name) return meta.name
-  return supabaseUser.value?.email?.split('@')[0] || 'User'
+  return sessionUser.value?.email?.split('@')[0] || 'User'
 })
 
 const displayEmail = computed(() =>
-  authProfile.profile?.email || supabaseUser.value?.email || ''
+  authProfile.profile?.email || sessionUser.value?.email || ''
 )
 
 const avatarUrl = computed(() =>
-  authProfile.profile?.avatar_url || supabaseUser.value?.user_metadata?.avatar_url || null
+  authProfile.profile?.avatar_url || sessionUser.value?.user_metadata?.avatar_url || null
 )
 </script>

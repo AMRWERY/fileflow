@@ -134,21 +134,22 @@ const pendingSkeletonMode = computed<'folder' | 'file'>(() =>
 
 // ── Mount: detect folder vs file, no reactive loop ───────────────
 onMounted(async () => {
-  try {
-    const data = await $fetch<FolderData>(`/api/folders/${id.value}`, { credentials: 'include' })
-    folder.value = data
+  const f = store.getFolder(id.value)
+  if (f) {
+    folder.value = { ...f, path: '' }
     await store.fetchContents(id.value)
-  } catch {
-    // Not a folder — try as a file
-    try {
-      const data = await $fetch<FileData>(`/api/files/${id.value}`, { credentials: 'include' })
-      fileRecord.value = data
-    } catch {
-      // Neither found
+  } else {
+    const file = store.getFile(id.value)
+    if (file) {
+      fileRecord.value = {
+        ...file,
+        storage_path: '',
+        thumbnail_path: null,
+        signedUrl: file.url,
+      }
     }
-  } finally {
-    pending.value = false
   }
+  pending.value = false
 })
 
 // ── File type helpers ────────────────────────────────────────────

@@ -17,6 +17,7 @@
         class="shrink-0 z-30 border-b border-white/5 bg-[#0a0a0c]/95 backdrop-blur-md supports-[backdrop-filter]:bg-[#0a0a0c]/80 px-6 md:px-8 pt-6 md:pt-8 pb-4">
         <AppHeader />
       </div>
+      <TrialBanner />
       <div
         class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 md:px-8 pt-6 md:pt-8 pb-8 md:pb-10">
         <slot />

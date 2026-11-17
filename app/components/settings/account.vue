@@ -108,8 +108,7 @@
 <script lang="ts" setup>
 const authProfile = useAuthProfileStore()
 const authPassword = useAuthPasswordStore()
-const supabaseUser = useSupabaseUser()
-const supabase = useSupabaseClient()
+const sessionUser = computed(() => useAuthSessionStore().user)
 const toast = useToast()
 
 const firstName = ref('')
@@ -122,7 +121,7 @@ const isSaving = ref(false)
 const resolvedFullName = computed(() => {
   const fromProfile = authProfile.profile?.full_name?.trim()
   if (fromProfile) return fromProfile
-  const meta = supabaseUser.value?.user_metadata
+  const meta = sessionUser.value?.user_metadata
   const fromMetaFull = meta?.full_name != null ? String(meta.full_name).trim() : ''
   if (fromMetaFull) return fromMetaFull
   const fromMetaName = meta?.name != null ? String(meta.name).trim() : ''
@@ -153,7 +152,7 @@ watch(
 )
 
 watch(
-  () => supabaseUser.value?.email,
+  () => sessionUser.value?.email,
   (e) => {
     if (e) email.value = e
   },
@@ -161,7 +160,7 @@ watch(
 )
 
 onMounted(async () => {
-  if (supabaseUser.value && !authProfile.profile) {
+  if (sessionUser.value && !authProfile.profile) {
     await authProfile.fetchProfile()
   }
 })
@@ -179,16 +178,11 @@ const storagePercentage = computed(() => authProfile.storagePercentage)
 
 // Handlers
 const saveProfile = async () => {
-  if (!supabaseUser.value) return
+  if (!sessionUser.value) return
   isSaving.value = true
   try {
     const fullName = `${firstName.value} ${lastName.value}`.trim()
-    const { error } = await supabase
-      .from('profiles')
-      .update({ full_name: fullName })
-      .eq('id', supabaseUser.value.id)
-    if (error) throw error
-    await authProfile.fetchProfile()
+    await authProfile.updateFullName(fullName)
     toast.success('Profile updated', 'Your personal information has been saved successfully.')
   } catch (err: any) {
     toast.error('Failed to update', err.message || 'Something went wrong.')

@@ -174,13 +174,13 @@
 
 <script lang="ts" setup>
 const authPassword = useAuthPasswordStore();
-const supabaseUser = useSupabaseUser();
+const sessionUser = computed(() => useAuthSessionStore().user);
 const isResetting = ref(false);
 
 const handlePasswordReset = async () => {
-  if (supabaseUser.value?.email) {
+  if (sessionUser.value?.email) {
     isResetting.value = true;
-    await authPassword.resetPassword(supabaseUser.value.email);
+    await authPassword.resetPassword(sessionUser.value.email);
     isResetting.value = false;
   }
 }

@@ -7,10 +7,6 @@ export function useAllFilesPage() {
   const filterQuery = ref("");
   const viewMode = ref<"grid" | "list">("grid");
 
-  // Always fetch on the client after mount — the server handles auth.
-  // Do NOT guard by user.value?.id here: in @nuxtjs/supabase v2 the session
-  // restoration is async, so user.value can still be null at onMounted time
-  // even when the user is logged in, causing fetchContents to never run.
   onMounted(() => {
     store.fetchContents(null)
   })

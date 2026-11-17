@@ -14,38 +14,32 @@ npm install        # also runs `nuxt prepare` (postinstall) to regenerate .nuxt 
 
 There is **no lint, test, or typecheck script** configured. After changing types or module config, run `npm install` (or `nuxt prepare`) to regenerate `.nuxt/`.
 
-Requires a `.env` with Supabase credentials (`SUPABASE_URL`, `SUPABASE_KEY`, and service-role key) — `@nuxtjs/supabase` reads these at startup.
+The app is currently **fully static — there is no backend**. No `.env` is needed.
 
 ## Stack
 
-Nuxt 4 (Vue 3, `<script setup>` + TS), Pinia, Tailwind 3 (+ RTL), `@nuxtjs/supabase`, `@nuxt/icon` (Iconify), vee-validate. Supabase is the entire backend: Postgres, Auth, Storage, Realtime.
+Nuxt 4 (Vue 3, `<script setup>` + TS), Pinia, Tailwind 3 (+ RTL), `@nuxt/icon` (Iconify), vee-validate. All data is static mock data (`app/data/mock.ts`).
 
 ## Architecture
 
 **`srcDir` is `app/`** (Nuxt 4 default). Nitro server routes live in `server/` at the repo root, *outside* `app/`.
 
-### Supabase access — two distinct clients
-This is the most important distinction in the codebase:
-- **User/RLS client** — respects row-level security, scoped to the signed-in user. Client-side via `useSupabaseClient()`; server-side via `useServerSupabase(event)` (`app/utils/supabase.ts`), which also enforces auth and returns `{ client, user }`.
-- **Service-role client** — *bypasses RLS*, server-only, for admin/privileged ops (e.g. creating buckets, cross-user writes). Via `serverSupabaseServiceRole()` / `useServerSupabaseAdmin(event)`.
-
-Every protected API route must start with `requireAuth(event)` (or `useServerSupabase`), which throws a 401. Note `user.sub` (JWT) is the user id server-side, while the client uses `user.id`. `filesStore.resolveAuthUserId()` exists because `useSupabaseUser()` can lag hydration — reuse that pattern rather than reading `user.value.id` directly.
-
-Route protection is declarative in `nuxt.config.ts` `supabase.redirectOptions`: unauthenticated users redirect to `/auth/login`; `['/auth/*', '/confirm', '/share/*']` are public. There is **no `app/middleware/`** — do not add per-page auth middleware; extend the config exclude list instead.
+### Static data (no backend)
+There is no `server/` directory, no API routes and no route-guard. All data comes from `app/data/mock.ts` (`MOCK_USER`, `MOCK_PROFILE`, `MOCK_FOLDERS`, `MOCK_FILES`).
+- `useFilesStore` keeps an in-memory copy of the mock tree; create/upload/delete mutate it until reload.
+- Auth stores never call a server: a mock user is always signed in, and `login`/`signUp`/`logout` just toggle local state and navigate.
+- To reintroduce a backend, swap the store internals; component-facing store APIs were kept stable.
 
 ### Auth stores (domain-split)
-Auth is split into three Pinia stores under `app/stores/auth/`, re-exported through the `app/composables/useAuth.ts` barrel:
-- `session.ts` → `useAuthSessionStore` — login, signUp, Google OAuth, logout, `isAuthenticated`.
-- `profile.ts` → `useAuthProfileStore` — hydrates the `profiles` row, `storagePercentage`.
-- `password.ts` → `useAuthPasswordStore` — reset/change password flow (in active development on the `auth` branch).
-- `_errors.ts` — `formatAuthError()` maps raw Supabase error strings to user-friendly copy. Route all auth errors through it.
+Three Pinia stores under `app/stores/auth/`, re-exported through the `app/composables/useAuth.ts` barrel:
+- `session.ts` → `useAuthSessionStore` — mock `user`, login, signUp, Google (stubbed), logout, `isAuthenticated`.
+- `profile.ts` → `useAuthProfileStore` — mock `profiles` row, `updateFullName`, `storagePercentage`.
+- `password.ts` → `useAuthPasswordStore` — stubbed reset-password.
 
-Stores are setup-style (`defineStore(id, () => {...})`) and cross-call each other directly (e.g. session `login` calls `useAuthProfileStore().fetchProfile()`). Note they redeclare `useSupabaseClient`/`useSupabaseUser` with `declare function` at the top — this is a deliberate TS workaround for auto-imports; keep it when adding new stores here.
+Stores are setup-style (`defineStore(id, () => {...})`) and cross-call each other directly.
 
-### Database
-`docs/DATABASE.md` is the **source of truth** for schema, RLS policies, triggers, storage buckets, and migration order. TS interfaces in `app/types/database.types.ts` mirror it — keep the two in sync when schema changes. Key model: `profiles` (1:1 with `auth.users`, auto-created by trigger), `folders` (materialized `path` for subtree queries, soft-delete cascade), `files` (soft-delete to trash), plus versions/tags/shares/team-spaces/activity-logs.
-
-> ⚠️ Known inconsistency: `docs/DATABASE.md` names the main storage bucket `files`, but `server/api/files/upload.post.ts` uses `user-files`. Verify the actual bucket before touching upload/download code.
+### Types
+`app/types/database.types.ts` holds the TS interfaces for the data model (`Profile`, `Folder`, `FileRecord`, …). There is no database or schema file.
 
 ### Components
 `nuxt.config.ts` sets `components: [{ pathPrefix: false }]`, so components are referenced by filename regardless of directory (`<FileCard>`, not `<DashboardFileCard>`). Keep filenames unique across `app/components/`.

@@ -33,7 +33,10 @@ const trashItems = ref<TrashItem[]>([
   { id: 8, name: 'meeting_notes_2023.txt', type: 'text', deletedTime: '25 days ago' },
 ]);
 
+const trial = useTrialLimits()
+
 const emptyTrash = () => {
+  if (!trial.allow('purge')) return
   if (confirm('Are you sure you want to permanently delete all items?')) {
     trashItems.value = [];
   }
@@ -45,6 +48,7 @@ const restoreItem = (id: number) => {
 };
 
 const deletePermanently = (id: number) => {
+  if (!trial.allow('purge')) return
   if (confirm('Are you sure you want to permanently delete this item?')) {
     trashItems.value = trashItems.value.filter(item => item.id !== id);
   }

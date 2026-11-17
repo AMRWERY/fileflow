@@ -17,7 +17,7 @@
     <!-- Actions & Profile -->
     <div class="flex items-center gap-4">
       <!-- Notifications -->
-      <notifications-menu />
+      <notifications-menu v-if="!session.isTrial" />
 
       <!-- Profile -->
       <profile-menu />
@@ -28,5 +28,6 @@
 <script lang="ts" setup>
 const { toggle } = useSidebar()
 
+const session = useAuthSessionStore()
 const searchQuery = ref('')
 </script>

@@ -178,18 +178,18 @@
 
 <script lang="ts" setup>
 const auth = useAuthProfileStore()
-const supabaseUser = useSupabaseUser()
+const sessionUser = computed(() => useAuthSessionStore().user)
 
 const displayName = computed(() => {
   if (auth.profile?.full_name) return auth.profile.full_name;
-  const meta = supabaseUser.value?.user_metadata;
+  const meta = sessionUser.value?.user_metadata;
   if (meta?.full_name) return meta.full_name;
   if (meta?.name) return meta.name;
-  return supabaseUser.value?.email?.split('@')[0] || 'User';
+  return sessionUser.value?.email?.split('@')[0] || 'User';
 })
 
-const email = computed(() => auth.profile?.email || supabaseUser.value?.email || '')
-const avatarUrl = computed(() => auth.profile?.avatar_url || supabaseUser.value?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName.value}`)
+const email = computed(() => auth.profile?.email || sessionUser.value?.email || '')
+const avatarUrl = computed(() => auth.profile?.avatar_url || sessionUser.value?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName.value}`)
 
 const firstName = ref(displayName.value.split(' ')[0] || '');
 const lastName = ref(displayName.value.split(' ').slice(1).join(' ') || '');
@@ -201,7 +201,7 @@ watch(displayName, (newVal) => {
 }, { immediate: true });
 
 onMounted(async () => {
-  if (!auth.profile && supabaseUser.value) {
+  if (!auth.profile && sessionUser.value) {
     await auth.fetchProfile()
   }
 })

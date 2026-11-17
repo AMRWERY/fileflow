@@ -18,10 +18,14 @@ function pad(n: number) {
 }
 
 export function useGreeting() {
-  const now = ref(new Date())
+  // Seeded through useState so the server-rendered time is reused during hydration
+  // (avoids a text mismatch); the live clock starts ticking once mounted.
+  const seed = useState<number>('greeting-now', () => Date.now())
+  const now = ref(new Date(seed.value))
   let timer: ReturnType<typeof setInterval>
 
   onMounted(() => {
+    now.value = new Date()
     // tick every second for live clock
     timer = setInterval(() => { now.value = new Date() }, 1000)
   })

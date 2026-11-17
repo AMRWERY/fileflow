@@ -6,7 +6,6 @@ export default defineNuxtConfig({
     "@nuxtjs/tailwindcss",
     "@pinia/nuxt",
     "@nuxt/icon",
-    "@nuxtjs/supabase",
     '@vee-validate/nuxt'
   ],
   postcss: {
@@ -14,13 +13,6 @@ export default defineNuxtConfig({
       tailwindcss: {},
       autoprefixer: {},
     },
-  },
-  supabase: {
-    redirectOptions: {
-      login: '/auth/login',
-      callback: '/dashboard',
-      exclude: ['/auth/*', '/confirm', '/share/*'],
-    }
   },
   pinia: {
     storesDirs: ["./app/stores/**"],

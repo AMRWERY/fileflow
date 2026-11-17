@@ -1,14 +1,15 @@
-import type { SupabaseClient, User } from '@supabase/supabase-js'
-import { formatAuthError } from './_errors'
+import { MOCK_USER } from '~/data/mock'
 
-declare function useSupabaseClient(): SupabaseClient
-declare function useSupabaseUser(): Ref<User | null>
+type SessionUser = typeof MOCK_USER
 
+/**
+ * Static session store — no backend. A mock user is always "signed in";
+ * login / signUp / logout only toggle local state and navigate.
+ */
 export const useAuthSessionStore = defineStore('auth/session', () => {
-  const supabase = useSupabaseClient()
-  const supabaseUser = useSupabaseUser()
   const toast = useToast()
 
+  const user = ref<SessionUser | null>({ ...MOCK_USER })
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -16,101 +17,63 @@ export const useAuthSessionStore = defineStore('auth/session', () => {
     error.value = null
   }
 
-  const isAuthenticated = computed(() => !!supabaseUser.value)
+  const isAuthenticated = computed(() => !!user.value)
 
-  // ─── Email / Password login ─────────────────────────────────────────────────
-
-  const login = async (email: string, password: string): Promise<boolean> => {
-    isLoading.value = true
-    error.value = null
-    try {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) throw err
-      await useAuthProfileStore().fetchProfile()
-      toast.success('Welcome back!', 'You have signed in successfully.')
-      await navigateTo('/dashboard')
-      return true
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.'
-      error.value = formatAuthError(msg)
-      toast.error('Sign in failed', error.value ?? msg)
-      return false
-    } finally {
-      isLoading.value = false
-    }
+  const login = async (email: string, _password: string): Promise<boolean> => {
+    user.value = { ...MOCK_USER, email: email || MOCK_USER.email }
+    useAuthProfileStore().fetchProfile()
+    toast.success('Welcome back!', 'You have signed in successfully.')
+    await navigateTo('/dashboard')
+    return true
   }
-
-  // ─── Sign up ────────────────────────────────────────────────────────────────
 
   const signUp = async (
     email: string,
-    password: string,
+    _password: string,
     fullName: string,
   ): Promise<'confirm_email' | 'ok' | 'error'> => {
-    isLoading.value = true
-    error.value = null
-    try {
-      const { data, error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      })
-      if (err) throw err
-      if (data.session) {
-        await useAuthProfileStore().fetchProfile()
-        toast.success('Account created!', 'Welcome to FileFlow.')
-        await navigateTo('/dashboard')
-        return 'ok'
-      }
-      toast.info('Check your inbox', 'A confirmation link has been sent to your email.')
-      return 'confirm_email'
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.'
-      error.value = formatAuthError(msg)
-      toast.error('Sign up failed', error.value ?? msg)
-      return 'error'
-    } finally {
-      isLoading.value = false
+    user.value = {
+      ...MOCK_USER,
+      email: email || MOCK_USER.email,
+      user_metadata: { ...MOCK_USER.user_metadata, full_name: fullName || MOCK_USER.user_metadata.full_name },
     }
+    useAuthProfileStore().fetchProfile()
+    toast.success('Account created!', 'Welcome to FileFlow.')
+    await navigateTo('/dashboard')
+    return 'ok'
   }
-
-  // ─── OAuth (Google) ─────────────────────────────────────────────────────────
 
   const loginWithGoogle = async (): Promise<void> => {
-    isLoading.value = true
-    error.value = null
-    try {
-      const redirectTo = `${window.location.origin}/confirm`
-      const { error: err } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
-        },
-      })
-      if (err) throw err
-      // Browser redirects — keep isLoading true until navigation completes
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'OAuth sign-in failed.'
-      error.value = formatAuthError(msg)
-      isLoading.value = false
-    }
+    await login(MOCK_USER.email, '')
   }
 
-  // ─── Logout ─────────────────────────────────────────────────────────────────
+  // ─── Free trial ─────────────────────────────────────────────────────────────
+  const TRIAL_DAYS = 14
+  const trialEndsAt = useCookie<string | null>('ff_trial_ends', {
+    maxAge: 60 * 60 * 24 * TRIAL_DAYS,
+    default: () => null,
+  })
+  const uploadsUsed = ref(0)
+  const foldersUsed = ref(0)
+  const isTrial = computed(() => !!trialEndsAt.value && new Date(trialEndsAt.value) > new Date())
+
+  /** Starts a free trial: grants a full-access trial session and opens the app. */
+  const startTrial = async (email?: string): Promise<void> => {
+    trialEndsAt.value = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString()
+    user.value = { ...MOCK_USER, email: email || MOCK_USER.email }
+    useAuthProfileStore().fetchProfile()
+    toast.success('Free trial started', `Explore every page for ${TRIAL_DAYS} days. Some actions are limited on the trial.`)
+    await navigateTo('/dashboard')
+  }
 
   const logout = async (): Promise<void> => {
-    isLoading.value = true
-    try {
-      await supabase.auth.signOut()
-      useAuthProfileStore().profile = null
-      await navigateTo('/auth/login')
-    } finally {
-      isLoading.value = false
-    }
+    user.value = null
+    useAuthProfileStore().profile = null
+    await navigateTo('/auth/login')
   }
 
   return {
+    user,
     isLoading,
     error,
     isAuthenticated,
@@ -118,6 +81,11 @@ export const useAuthSessionStore = defineStore('auth/session', () => {
     login,
     signUp,
     loginWithGoogle,
+    startTrial,
+    isTrial,
+    uploadsUsed,
+    foldersUsed,
+    trialEndsAt,
     logout,
   }
 })

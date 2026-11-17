@@ -1,23 +1,16 @@
-import { useSupabaseClient, useSupabaseUser } from "#imports";
-import type { Database } from '~/types/database.types';
 import type { FileItem, FolderPreviewFile } from "~/types/all-files";
+import { MOCK_FILES, MOCK_FOLDERS, type MockFile, type MockFolder } from "~/data/mock";
 
-function asRowArray<T>(data: unknown): T[] {
-  if (data == null) return []
-  return Array.isArray(data) ? data : []
-}
-
-type UserLike = { id?: string; sub?: string } | null | undefined
-
-function idFromUserLike(u: UserLike): string | null {
-  if (!u || typeof u !== 'object') return null
-  const id = u.id ?? u.sub
-  return typeof id === 'string' && id.length > 0 ? id : null
-}
-
+/**
+ * Static, in-memory files store. All data comes from `~/data/mock` and
+ * mutations (create / upload / delete) only live until the page is reloaded.
+ */
 export const useFilesStore = defineStore("files", () => {
-  const supabase = useSupabaseClient<Database>();
-  const user = useSupabaseUser();
+  // In-memory "database"
+  const db = reactive({
+    folders: MOCK_FOLDERS.map((f): MockFolder => ({ ...f })),
+    files: MOCK_FILES.map((f): MockFile => ({ ...f })),
+  });
 
   const files = ref<FileItem[]>([]);
   const folders = ref<FileItem[]>([]);
@@ -26,224 +19,113 @@ export const useFilesStore = defineStore("files", () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  /** True after the first root listing fetch (`fetchContents(null)`) has finished (success or error). */
+  /** True after the first root listing (`fetchContents(null)`) has run. */
   const hasRootListingFetched = ref(false);
 
-  /**
-   * Nuxt `useSupabaseUser()` can lag hydration or omit `id` while the client session is valid.
-   * Prefer session / getUser() so folder create + API calls always get a real UUID.
-   */
-  async function resolveAuthUserId(): Promise<string | null> {
-    const fromState = idFromUserLike(user.value as UserLike)
-    if (fromState) return fromState
+  const toFolderItem = (f: MockFolder): FileItem => ({
+    id: f.id,
+    name: f.name,
+    type: "folder",
+    size: "--",
+    meta: "-",
+    selected: false,
+    previewFiles: db.files
+      .filter((file) => file.folder_id === f.id)
+      .slice(0, 3)
+      .map((p): FolderPreviewFile => ({
+        id: p.id,
+        name: p.name,
+        type: mimeToType(p.mime_type),
+        mime_type: p.mime_type,
+      })),
+  });
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const fromSession = idFromUserLike(session?.user as UserLike)
-    if (fromSession) return fromSession
+  const toFileItem = (f: MockFile): FileItem => ({
+    id: f.id,
+    name: f.name,
+    type: mimeToType(f.mime_type) as FileItem["type"],
+    size: formatBytes(f.size),
+    date: f.created_at,
+    meta: new Date(f.created_at).toLocaleDateString(),
+    selected: false,
+    previewUrl: f.mime_type.startsWith("image/") ? f.url ?? undefined : undefined,
+  });
 
-    const { data: got, error: guErr } = await supabase.auth.getUser()
-    if (!guErr && got.user) {
-      const fromGet = idFromUserLike(got.user as UserLike)
-      if (fromGet) return fromGet
-    }
-
-    return null
-  }
-
-  function fetchErrorMessage(e: unknown): string {
-    if (e && typeof e === 'object') {
-      const err = e as Record<string, unknown>
-      const data = err.data as Record<string, unknown> | undefined
-      const sm = data?.statusMessage ?? data?.message
-      if (typeof sm === 'string' && sm) return sm
-      if (typeof err.message === 'string' && err.message) return err.message
-    }
-    return 'Request failed'
-  }
-
-  /** Loads folders + files for the given parent. Returns false on failure (error ref is set). */
+  /** Loads folders + files for the given parent. */
   const fetchContents = async (folderId: string | null = null): Promise<boolean> => {
-    isLoading.value = true
-    error.value = null
-    currentFolderId.value = folderId
+    currentFolderId.value = folderId;
+    error.value = null;
+    folders.value = db.folders.filter((f) => f.parent_id === folderId).map(toFolderItem);
+    files.value = db.files.filter((f) => f.folder_id === folderId).map(toFileItem);
+    if (folderId === null) hasRootListingFetched.value = true;
+    return true;
+  };
 
-    try {
-      const parentQuery = folderId ? { parentId: folderId } : {}
-      const folderQuery = folderId ? { folderId } : {}
-
-      const [foldersData, filesData] = await Promise.all([
-        $fetch('/api/folders', { method: 'GET', query: parentQuery, credentials: 'include' }),
-        $fetch('/api/files', { method: 'GET', query: folderQuery, credentials: 'include' }),
-      ])
-
-      const rawFolders = asRowArray<Record<string, unknown>>(foldersData)
-      const folderIds = rawFolders.map((f) => f.id as string).filter(Boolean)
-
-      // Fetch preview files for all folders in one request
-      let previewMap: Record<string, { id: string; name: string; mime_type: string }[]> = {}
-      if (folderIds.length) {
-        try {
-          const preview = await $fetch('/api/folders/preview', {
-            method: 'GET',
-            query: { folderIds: folderIds.join(',') },
-            credentials: 'include',
-          })
-          previewMap = (preview as typeof previewMap) ?? {}
-        } catch {
-          // preview is best-effort, don't block the main render
-        }
-      }
-
-      folders.value = rawFolders.map((f) => {
-        const fid = f.id as string
-        const previews = previewMap[fid] ?? []
-        return {
-          id: fid,
-          name: f.name as string,
-          type: 'folder' as const,
-          size: '--',
-          meta: '-',
-          selected: false,
-          previewFiles: previews.map((p): FolderPreviewFile => ({
-            id: p.id,
-            name: p.name,
-            type: mimeToType(p.mime_type),
-            mime_type: p.mime_type,
-          })),
-        }
-      })
-
-      files.value = asRowArray<Record<string, unknown>>(filesData).map((f): FileItem => {
-        const mime = String(f.mime_type ?? '')
-        let simpleType = 'document'
-        if (mime.startsWith('image/')) simpleType = 'image'
-        else if (mime.startsWith('video/')) simpleType = 'video'
-        else if (mime === 'application/pdf') simpleType = 'pdf'
-        else if (mime.includes('zip')) simpleType = 'zip'
-
-        const createdAt = String(f.created_at ?? '')
-        return {
-          id: f.id as string,
-          name: f.name as string,
-          type: simpleType as FileItem['type'],
-          size: formatBytes(Number(f.size) || 0),
-          date: createdAt,
-          meta: createdAt ? new Date(createdAt).toLocaleDateString() : '-',
-          selected: false,
-          // preview_url is the batch-signed URL returned by the files API (images only).
-          // Fall back to thumbnail_path public URL for any legacy rows that have one.
-          previewUrl: f.preview_url
-            ? String(f.preview_url)
-            : f.thumbnail_path
-              ? supabase.storage.from('thumbnails').getPublicUrl(String(f.thumbnail_path)).data.publicUrl
-              : undefined,
-        }
-      })
-
-      return true
-    } catch (e: unknown) {
-      console.error('Error fetching contents:', e)
-      error.value = fetchErrorMessage(e) || 'Failed to fetch files'
-      return false
-    } finally {
-      isLoading.value = false
-      if (folderId === null) {
-        hasRootListingFetched.value = true
-      }
-    }
-  }
+  const getFolder = (id: string) => db.folders.find((f) => f.id === id) ?? null;
+  const getFile = (id: string) => db.files.find((f) => f.id === id) ?? null;
 
   const createFolder = async (name: string, parentId: string | null = null): Promise<boolean> => {
-    if (!(await resolveAuthUserId())) {
-      error.value = 'You must be signed in to create a folder.'
-      return false
-    }
-
-    const trimmed = name.trim()
+    const trial = useTrialLimits();
+    if (!trial.allow('folder')) return false;
+    const trimmed = name.trim();
     if (!trimmed) {
-      error.value = 'Folder name is required.'
-      return false
+      error.value = "Folder name is required.";
+      return false;
     }
-
-    const parent = toValue(parentId) ?? null
-
-    try {
-      isLoading.value = true
-      error.value = null
-
-      await $fetch('/api/auth/ensure-profile', { method: 'POST', credentials: 'include' })
-
-      await $fetch('/api/folders', {
-        method: 'POST',
-        credentials: 'include',
-        body: { name: trimmed, parent_id: parent },
-      })
-
-      const refreshed = await fetchContents(parent)
-      if (!refreshed) {
-        if (!error.value) error.value = 'Folder was created but the list could not be refreshed.'
-        return false
-      }
-
-      return true
-    } catch (e: unknown) {
-      error.value = fetchErrorMessage(e) || 'Failed to create folder'
-      console.error('[files] createFolder', e)
-      return false
-    } finally {
-      isLoading.value = false
-    }
-  }
+    db.folders.push({
+      id: `f-${Date.now()}`,
+      name: trimmed,
+      parent_id: parentId,
+      created_at: new Date().toISOString(),
+    });
+    trial.record('folder');
+    return fetchContents(parentId);
+  };
 
   const uploadFile = async (file: File, folderId: string | null = null): Promise<boolean> => {
-    if (!(await resolveAuthUserId())) {
-      error.value = 'You must be signed in to upload files.'
-      return false
-    }
-    const folder = toValue(folderId) ?? null
-    try {
-      isLoading.value = true
-      error.value = null
-      await $fetch('/api/auth/ensure-profile', { method: 'POST', credentials: 'include' })
-
-      const form = new FormData()
-      form.append('file', file, file.name)
-      if (folder) form.append('folder_id', folder)
-
-      await $fetch('/api/files/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      })
-
-      await fetchContents(currentFolderId.value)
-      return true
-    } catch (e: unknown) {
-      error.value = fetchErrorMessage(e) || 'Upload failed'
-      return false
-    } finally {
-      isLoading.value = false
-    }
-  }
+    const trial = useTrialLimits();
+    if (!trial.allow('upload')) return false;
+    const dot = file.name.lastIndexOf(".");
+    db.files.push({
+      id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: file.name,
+      mime_type: file.type || "application/octet-stream",
+      size: file.size,
+      created_at: new Date().toISOString(),
+      folder_id: folderId,
+      extension: dot > -1 ? file.name.slice(dot + 1).toLowerCase() : null,
+      url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+    });
+    trial.record('upload');
+    return fetchContents(currentFolderId.value);
+  };
 
   const deleteItems = async (fileIds: string[], folderIds: string[]) => {
-    if (!(await resolveAuthUserId())) {
-      error.value = 'You must be signed in to delete items.'
-      return
+    if (!useTrialLimits().allow('delete')) return;
+    error.value = null;
+    // Collect the whole subtree of every deleted folder.
+    const doomed = new Set<string>(folderIds);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const f of db.folders) {
+        if (f.parent_id && doomed.has(f.parent_id) && !doomed.has(f.id)) {
+          doomed.add(f.id);
+          grew = true;
+        }
+      }
     }
-    try {
-      isLoading.value = true;
-      await $fetch('/api/files/delete', {
-        method: 'POST',
-        credentials: 'include',
-        body: { fileIds, folderIds }
-      });
-      await fetchContents(currentFolderId.value);
-    } catch (e: any) {
-      error.value = e.data?.statusMessage || e.message;
-    } finally {
-      isLoading.value = false;
-    }
+    db.folders = db.folders.filter((f) => !doomed.has(f.id));
+    db.files = db.files.filter(
+      (f) => !fileIds.includes(f.id) && !(f.folder_id && doomed.has(f.folder_id)),
+    );
+    await fetchContents(currentFolderId.value);
+  };
+
+  /** Static share link — nothing is persisted. */
+  const createShareLink = async (fileId: string): Promise<string> => {
+    if (!useTrialLimits().allow('share')) return '';
+    return `${window.location.origin}/share/${encodeURIComponent(fileId)}`;
   };
 
   return {
@@ -254,20 +136,23 @@ export const useFilesStore = defineStore("files", () => {
     error,
     hasRootListingFetched,
     fetchContents,
+    getFolder,
+    getFile,
     deleteItems,
     createFolder,
-    uploadFile
+    uploadFile,
+    createShareLink,
   };
 });
 
 function mimeToType(mime: string): string {
-  if (!mime) return 'document'
-  if (mime.startsWith('image/')) return 'image'
-  if (mime.startsWith('video/')) return 'video'
-  if (mime === 'application/pdf') return 'pdf'
-  if (mime.includes('zip') || mime.includes('compressed')) return 'zip'
-  if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return 'sheet'
-  return 'document'
+  if (!mime) return "document";
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime === "application/pdf") return "pdf";
+  if (mime.includes("zip") || mime.includes("compressed")) return "zip";
+  if (mime.includes("sheet") || mime.includes("excel") || mime.includes("csv")) return "sheet";
+  return "document";
 }
 
 function formatBytes(bytes: number, decimals = 2) {

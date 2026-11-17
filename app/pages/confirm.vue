@@ -13,21 +13,8 @@
 <script lang="ts" setup>
 definePageMeta({ layout: false })
 
-const route = useRoute()
-const supabase = useSupabaseClient()
-
-const code = route.query.code as string | undefined
-
-if (code) {
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-  if (error) {
-    await navigateTo('/auth/login')
-  } else {
-    await navigateTo('/dashboard')
-  }
-} else {
-  await navigateTo('/auth/login')
-}
+// Static mode: no email/OAuth confirmation step — go straight to the app.
+await navigateTo('/dashboard')
 
 useHead({
   titleTemplate: () => 'Confirm Email',

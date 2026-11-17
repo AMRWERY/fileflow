@@ -26,7 +26,7 @@
               <h2 class="text-xl font-bold tracking-tight mb-1">Team Members</h2>
               <p class="text-xs text-gray-500">Manage who has access to this workspace and their permissions.</p>
             </div>
-            <VButton variant="secondary" size="sm">
+            <VButton variant="secondary" size="sm" @click="trial.allow('invite')">
               Invite User
             </VButton>
           </div>
@@ -130,6 +130,7 @@
 <script lang="ts" setup>
 import type { TeamMember } from '~/types/team';
 
+const trial = useTrialLimits();
 const workspaceName = ref('Design Studio');
 const workspaceUrl = ref('fileflow.io/design-studio');
 const allowGuestSharing = ref(true);

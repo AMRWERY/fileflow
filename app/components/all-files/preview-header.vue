@@ -50,7 +50,7 @@ const props = defineProps<{
 const toast = useToast()
 const copying = ref(false)
 
-/** Clipboard after `await $fetch` often fails (user gesture expired); use fallback. */
+/** Clipboard after an `await` often fails (user gesture expired); use fallback. */
 function copyTextToClipboard(text: string): boolean {
   try {
     const ta = document.createElement('textarea')
@@ -73,19 +73,6 @@ function copyTextToClipboard(text: string): boolean {
   } catch {
     return false
   }
-}
-
-function fetchErrorMessage(e: unknown): string {
-  if (!e || typeof e !== 'object') return ''
-  const err = e as Record<string, unknown>
-  if (typeof err.statusMessage === 'string' && err.statusMessage) return err.statusMessage
-  const d = err.data as Record<string, unknown> | undefined
-  if (d) {
-    if (typeof d.statusMessage === 'string' && d.statusMessage) return d.statusMessage
-    if (typeof d.message === 'string' && d.message) return d.message
-  }
-  if (typeof err.message === 'string' && err.message) return err.message
-  return ''
 }
 
 async function onDownload() {
@@ -117,14 +104,7 @@ async function onCopyLink() {
   copying.value = true
   let shareUrl = ''
   try {
-    const res = await $fetch<{ url: string }>(`/api/files/${encodeURIComponent(String(id))}/share`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    shareUrl = res.url
-  } catch (e: unknown) {
-    toast.error('Could not create link', fetchErrorMessage(e) || 'Request failed.')
-    return
+    shareUrl = await useFilesStore().createShareLink(String(id))
   } finally {
     copying.value = false
   }

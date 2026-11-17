@@ -57,16 +57,16 @@
 import type { RecentFile } from "@/types/recent-file";
 
 const auth = useAuthProfileStore()
-const supabaseUser = useSupabaseUser()
+const sessionUser = computed(() => useAuthSessionStore().user)
 const { greeting, timeString, dateString } = useGreeting()
 
 // Show only the first name for a friendlier greeting
 const firstName = computed(() => {
   const full =
     auth.profile?.full_name ||
-    supabaseUser.value?.user_metadata?.full_name ||
-    supabaseUser.value?.user_metadata?.name ||
-    supabaseUser.value?.email?.split('@')[0] ||
+    sessionUser.value?.user_metadata?.full_name ||
+    sessionUser.value?.user_metadata?.name ||
+    sessionUser.value?.email?.split('@')[0] ||
     'there'
   return full.split(' ')[0]
 })
