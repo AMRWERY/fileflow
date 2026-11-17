@@ -124,7 +124,7 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore()
+const auth = useAuthSessionStore()
 
 const agreeToTerms = ref(false)
 const oauthLoading = ref<'google' | null>(null)

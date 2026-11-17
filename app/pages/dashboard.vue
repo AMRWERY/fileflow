@@ -56,7 +56,7 @@
 <script lang="ts" setup>
 import type { RecentFile } from "@/types/recent-file";
 
-const auth = useAuthStore()
+const auth = useAuthProfileStore()
 const supabaseUser = useSupabaseUser()
 const { greeting, timeString, dateString } = useGreeting()
 

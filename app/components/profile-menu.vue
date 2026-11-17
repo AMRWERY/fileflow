@@ -60,7 +60,8 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore()
+const authSession = useAuthSessionStore()
+const authProfile = useAuthProfileStore()
 const supabaseUser = useSupabaseUser()
 
 const profileOpen = ref(false)
@@ -84,7 +85,7 @@ const profileMenu = [
   {
     label: 'Sign Out',
     icon: 'ph:sign-out-duotone',
-    action: () => auth.logout(),
+    action: () => authSession.logout(),
     danger: true,
   },
 ]
@@ -101,15 +102,15 @@ const handleOutsideClick = (e: MouseEvent) => {
 
 // Fetch profile on mount in case of page refresh
 onMounted(async () => {
-  if (!auth.profile && supabaseUser.value) {
-    await auth.fetchProfile()
+  if (!authProfile.profile && supabaseUser.value) {
+    await authProfile.fetchProfile()
   }
   document.addEventListener('click', handleOutsideClick)
 })
 
 // profile.full_name → user_metadata.full_name (OAuth) → email prefix → 'User'
 const displayName = computed(() => {
-  if (auth.profile?.full_name) return auth.profile.full_name
+  if (authProfile.profile?.full_name) return authProfile.profile.full_name
   const meta = supabaseUser.value?.user_metadata
   if (meta?.full_name) return meta.full_name
   if (meta?.name) return meta.name
@@ -117,10 +118,10 @@ const displayName = computed(() => {
 })
 
 const displayEmail = computed(() =>
-  auth.profile?.email || supabaseUser.value?.email || ''
+  authProfile.profile?.email || supabaseUser.value?.email || ''
 )
 
 const avatarUrl = computed(() =>
-  auth.profile?.avatar_url || supabaseUser.value?.user_metadata?.avatar_url || null
+  authProfile.profile?.avatar_url || supabaseUser.value?.user_metadata?.avatar_url || null
 )
 </script>

@@ -173,14 +173,14 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore();
+const authPassword = useAuthPasswordStore();
 const supabaseUser = useSupabaseUser();
 const isResetting = ref(false);
 
 const handlePasswordReset = async () => {
   if (supabaseUser.value?.email) {
     isResetting.value = true;
-    await auth.resetPassword(supabaseUser.value.email);
+    await authPassword.resetPassword(supabaseUser.value.email);
     isResetting.value = false;
   }
 }

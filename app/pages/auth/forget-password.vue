@@ -65,21 +65,9 @@
               </p>
             </div>
 
-            <!-- Rate-limit Banner -->
+            <!-- Error Banner -->
             <Transition name="fade">
-              <div v-if="rateLimited"
-                class="flex items-start gap-3 mb-6 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm">
-                <icon name="ph:hourglass-medium-bold" class="mt-0.5 shrink-0 text-base" />
-                <div>
-                  <p class="font-medium">Too many requests</p>
-                  <p class="text-amber-400/80 text-xs mt-0.5">
-                    Supabase has temporarily blocked email sending. Please wait before trying again.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Generic Error Banner -->
-              <div v-else-if="auth.error"
+              <div v-if="auth.error"
                 class="flex items-start gap-3 mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                 <icon name="ph:warning-circle-bold" class="mt-0.5 shrink-0 text-base" />
                 <span>{{ auth.error }}</span>
@@ -96,7 +84,7 @@
                   <p v-if="cooldown > 0"
                     class="flex items-center justify-center gap-1.5 text-xs text-amber-400/90 px-1 text-center">
                     <icon name="ph:clock-countdown-bold" size="13" class="shrink-0" />
-                    {{ rateLimited ? 'Sending blocked — try again in' : 'You can request another link in' }}
+                    You can request another link in
                     <span class="font-semibold tabular-nums">{{ cooldownMinSec }}</span>
                   </p>
                 </Transition>
@@ -132,27 +120,23 @@
 </template>
 
 <script lang="ts" setup>
-const COOLDOWN_NORMAL = 60       // seconds after a successful send
-const COOLDOWN_RATE_LIMIT = 1800 // 30 min — Supabase free plan allows only 2 emails/hour
+const COOLDOWN = 60 // 1 minute between sends
 
-const auth = useAuthStore()
+const auth = useAuthPasswordStore()
 
 const emailSent = ref(false)
 const sentToEmail = ref('')
 const cooldown = ref(0)
-const rateLimited = ref(false)
 
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
-function startCooldown(seconds: number) {
-  rateLimited.value = seconds === COOLDOWN_RATE_LIMIT
-  cooldown.value = seconds
+function startCooldown() {
+  cooldown.value = COOLDOWN
   if (cooldownTimer) clearInterval(cooldownTimer)
   cooldownTimer = setInterval(() => {
     cooldown.value--
     if (cooldown.value <= 0) {
       cooldown.value = 0
-      rateLimited.value = false
       clearInterval(cooldownTimer!)
       cooldownTimer = null
     }
@@ -179,9 +163,7 @@ const handleResetRequest = async (values: Record<string, unknown>) => {
   sentToEmail.value = values.email as string
   if (result === 'ok') {
     emailSent.value = true
-    startCooldown(COOLDOWN_NORMAL)
-  } else if (result === 'rate_limited') {
-    startCooldown(COOLDOWN_RATE_LIMIT)
+    startCooldown()
   }
 }
 
@@ -189,8 +171,7 @@ const handleResend = async () => {
   if (cooldown.value > 0) return
   auth.clearError()
   const result = await auth.resetPassword(sentToEmail.value)
-  if (result === 'ok') startCooldown(COOLDOWN_NORMAL)
-  else if (result === 'rate_limited') startCooldown(COOLDOWN_RATE_LIMIT)
+  if (result === 'ok') startCooldown()
 }
 
 function backToForm() {

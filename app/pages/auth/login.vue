@@ -73,7 +73,7 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore()
+const auth = useAuthSessionStore()
 const oauthLoading = ref<'google' | null>(null)
 
 const loginSchema = {

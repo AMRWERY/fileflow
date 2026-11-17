@@ -106,7 +106,8 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore()
+const authProfile = useAuthProfileStore()
+const authPassword = useAuthPasswordStore()
 const supabaseUser = useSupabaseUser()
 const supabase = useSupabaseClient()
 const toast = useToast()
@@ -119,7 +120,7 @@ const isSaving = ref(false)
 
 /** Same resolution order as profile-menu / dashboard — DB row can lag OAuth metadata */
 const resolvedFullName = computed(() => {
-  const fromProfile = auth.profile?.full_name?.trim()
+  const fromProfile = authProfile.profile?.full_name?.trim()
   if (fromProfile) return fromProfile
   const meta = supabaseUser.value?.user_metadata
   const fromMetaFull = meta?.full_name != null ? String(meta.full_name).trim() : ''
@@ -143,7 +144,7 @@ function applyFullNameToFields(full: string) {
 watch(resolvedFullName, applyFullNameToFields, { immediate: true })
 
 watch(
-  () => auth.profile?.role,
+  () => authProfile.profile?.role,
   (r) => {
     if (r === 'admin') role.value = 'Admin'
     else if (r === 'user') role.value = 'Member'
@@ -160,21 +161,21 @@ watch(
 )
 
 onMounted(async () => {
-  if (supabaseUser.value && !auth.profile) {
-    await auth.fetchProfile()
+  if (supabaseUser.value && !authProfile.profile) {
+    await authProfile.fetchProfile()
   }
 })
 
 // Storage logic
 const usedStorage = computed(() => {
-  if (!auth.profile?.storage_used) return '0.0'
-  return (auth.profile.storage_used / (1024 * 1024 * 1024)).toFixed(1)
+  if (!authProfile.profile?.storage_used) return '0.0'
+  return (authProfile.profile.storage_used / (1024 * 1024 * 1024)).toFixed(1)
 })
 const totalStorage = computed(() => {
-  if (!auth.profile?.storage_quota) return '5.0'
-  return (auth.profile.storage_quota / (1024 * 1024 * 1024)).toFixed(1)
+  if (!authProfile.profile?.storage_quota) return '5.0'
+  return (authProfile.profile.storage_quota / (1024 * 1024 * 1024)).toFixed(1)
 })
-const storagePercentage = computed(() => auth.storagePercentage)
+const storagePercentage = computed(() => authProfile.storagePercentage)
 
 // Handlers
 const saveProfile = async () => {
@@ -187,7 +188,7 @@ const saveProfile = async () => {
       .update({ full_name: fullName })
       .eq('id', supabaseUser.value.id)
     if (error) throw error
-    await auth.fetchProfile()
+    await authProfile.fetchProfile()
     toast.success('Profile updated', 'Your personal information has been saved successfully.')
   } catch (err: any) {
     toast.error('Failed to update', err.message || 'Something went wrong.')
@@ -198,7 +199,7 @@ const saveProfile = async () => {
 
 const handlePasswordReset = async () => {
   if (email.value) {
-    await auth.resetPassword(email.value)
+    await authPassword.resetPassword(email.value)
   }
 }
 </script>

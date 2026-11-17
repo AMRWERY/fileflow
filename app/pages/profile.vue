@@ -177,7 +177,7 @@
 </template>
 
 <script lang="ts" setup>
-const auth = useAuthStore()
+const auth = useAuthProfileStore()
 const supabaseUser = useSupabaseUser()
 
 const displayName = computed(() => {
